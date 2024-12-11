@@ -1,93 +1,71 @@
 
+# Python Script for RustDesk Auto-Update
+# Created by IgorMan. 2024
+# https://best-itpro.ru
+
 # pip install rustdesk_auto_update
 
 import os
 import requests
-import subprocess
-import zipfile
 import shutil
 import platform
+import tempfile
 
-# URL для проверки последней версии RustDesk
+# URL to check the latest version of RustDesk
 RUSTDESK_LATEST_RELEASE_URL = "https://api.github.com/repos/rustdesk/rustdesk/releases/latest"
 
-# Папка для временного хранения файлов
-TEMP_DIR = "rustdesk_temp"
-
+# Folder for temporary storage of files
+TEMP_DIR = tempfile.gettempdir()
 
 def get_latest_version():
-    """Получает информацию о последней версии RustDesk."""
+    """Last release of RustDesk"""
     response = requests.get(RUSTDESK_LATEST_RELEASE_URL)
     if response.status_code != 200:
-        raise Exception("Не удалось получить информацию о последней версии RustDesk.")
+        raise Exception("Can't get info about last release version RustDesk. Check your Internet connection...")
     return response.json()
 
 
 def download_file(url, output_path):
-    """Скачивает файл по указанному URL."""
+    """Download the latest version of RustDesk"""
     response = requests.get(url, stream=True)
     if response.status_code != 200:
-        raise Exception(f"Не удалось скачать файл: {url}")
+        raise Exception(f"Failed to download installer: {url}")
     with open(output_path, 'wb') as file:
         for chunk in response.iter_content(chunk_size=8192):
             file.write(chunk)
 
 
-def install_rustdesk(zip_path):
-    """Устанавливает RustDesk из ZIP-архива."""
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(TEMP_DIR)
-
-    # Перемещаем файлы в нужную директорию (например, в Program Files)
-    if platform.system() == "Windows":
-        install_dir = os.path.join("C:\\", "Program Files", "RustDesk")
-    elif platform.system() == "Linux":
-        install_dir = "/opt/rustdesk"
-    elif platform.system() == "Darwin":  # macOS
-        install_dir = "/Applications/RustDesk"
-    else:
-        raise Exception("Неподдерживаемая операционная система.")
-
-    # Удаляем старую версию, если она существует
-    if os.path.exists(install_dir):
-        shutil.rmtree(install_dir)
-
-    # Перемещаем новую версию
-    shutil.move(os.path.join(TEMP_DIR, os.listdir(TEMP_DIR)[0]), install_dir)
-
-
 def main():
     try:
-        # Получаем информацию о последней версии
+        # Last release of RustDesk
         latest_release = get_latest_version()
         latest_version = latest_release["tag_name"]
-        print(f"Последняя версия RustDesk: {latest_version}")
+        print(f"Last release of RustDesk: {latest_version}")
 
         # Определяем ссылку для скачивания
         assets = latest_release["assets"]
         for asset in assets:
-            if "Windows" in asset["name"] and asset["name"].endswith(".zip"):
+            # for Windows
+            if "x86_64.exe" in asset["name"]:
                 download_url = asset["browser_download_url"]
                 break
         else:
-            raise Exception("Не удалось найти файл для скачивания.")
+            raise Exception("Failed to find file for download.")
 
         # Скачиваем файл
-        print("Скачивание новой версии...")
-        zip_path = os.path.join(TEMP_DIR, "rustdesk_latest.zip")
+        rustdesk_path = os.path.join(TEMP_DIR, asset["name"])
+        print(rustdesk_path)
+        print("Get last release...\n")
+
         os.makedirs(TEMP_DIR, exist_ok=True)
-        download_file(download_url, zip_path)
+        download_file(download_url, rustdesk_path)
 
-        # Устанавливаем RustDesk
-        print("Установка новой версии...")
-        install_rustdesk(zip_path)
+        print(f"Last release of RustDesk: {latest_version}")
+        print(f"was download in: {rustdesk_path}")
+        print("Just install it and enjoy!\n;) ")
 
-        # Очищаем временные файлы
-        shutil.rmtree(TEMP_DIR)
-
-        print("Обновление завершено!")
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
